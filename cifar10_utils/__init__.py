@@ -18,5 +18,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from tensorflow.models.image.cifar10 import cifar10
-from tensorflow.models.image.cifar10 import cifar10_input
+import sys
+import os
+sys.path.insert(0, os.path.join(
+        os.path.dirname(os.path.dirname(os.path.realpath(__file__))), 'cifar10_utils'))
+
+
+import cifar10
+import cifar10_input

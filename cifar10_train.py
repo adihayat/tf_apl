@@ -41,7 +41,7 @@ import time
 
 import tensorflow as tf
 
-from cifar10 import cifar10
+import cifar10_utils.cifar10 as cifar10
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -53,9 +53,16 @@ tf.app.flags.DEFINE_integer('max_steps', 1000000,
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
 
+tf.app.flags.DEFINE_integer('batch_size', 128,
+                            """Number of images to process in a batch.""")
+tf.app.flags.DEFINE_string('data_dir', '/tmp/cifar10_data',
+                           """Path to the CIFAR-10 data directory.""")
+tf.app.flags.DEFINE_boolean('use_fp16', False,
+                            """Train the model using fp16.""")
+
 def train():
   """Train CIFAR-10 for a number of steps."""
-  with tf.device('/gpu:0'):
+  with tf.device('/cpu:0'):
     with tf.Graph().as_default():
       global_step = tf.contrib.framework.get_or_create_global_step()
 
@@ -64,7 +71,8 @@ def train():
 
       # Build a Graph that computes the logits predictions from the
       # inference model.
-      logits = cifar10.inference(images)
+      logits = cifar10.inference_Srivastevaet(images)
+      #logits = cifar10.inference(images)
 
       # Calculate loss.
       loss = cifar10.loss(logits, labels)

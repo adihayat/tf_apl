@@ -44,17 +44,19 @@ import tarfile
 from six.moves import urllib
 import tensorflow as tf
 
-from cifar10 import cifar10_input
 
 FLAGS = tf.app.flags.FLAGS
 
 # Basic model parameters.
+'''
 tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
 tf.app.flags.DEFINE_string('data_dir', '/tmp/cifar10_data',
                            """Path to the CIFAR-10 data directory.""")
 tf.app.flags.DEFINE_boolean('use_fp16', False,
                             """Train the model using fp16.""")
+'''
+import cifar10_input
 
 # Global constants describing the CIFAR-10 data set.
 IMAGE_SIZE = cifar10_input.IMAGE_SIZE
@@ -183,6 +185,114 @@ def inputs(eval_data):
     images = tf.cast(images, tf.float16)
     labels = tf.cast(labels, tf.float16)
   return images, labels
+
+
+def inference_Srivastevaet(images):
+  print("Training Srivastevaet network")
+  # conv1
+  with tf.variable_scope('conv1') as scope:
+    kernel = _variable_with_weight_decay('weights',
+                                         shape=[5, 5, 3, 96],
+                                         stddev=5e-2,
+                                         wd=0.0)
+    conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding="SAME")
+    biases = _variable_on_cpu('biases', [96], tf.constant_initializer(0.0))
+    pre_activation = tf.nn.bias_add(conv, biases)
+    conv1 = tf.nn.relu(pre_activation, name=scope.name)
+
+    conv1 = tf.nn.dropout(conv1 , 0.25)
+    _activation_summary(conv1)
+
+  # pool1
+  pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME', name='pool1')
+
+  pool1 = tf.nn.dropout(pool1 , 0.25)
+  _activation_summary(pool1)
+
+
+  # conv2
+  with tf.variable_scope('conv2') as scope:
+    kernel = _variable_with_weight_decay('weights',
+                                         shape=[5, 5, 96, 128],
+                                         stddev=5e-2,
+                                         wd=0.0)
+    conv = tf.nn.conv2d(conv1, kernel, [1, 1, 1, 1], padding="SAME")
+    biases = _variable_on_cpu('biases', [128], tf.constant_initializer(0.0))
+    pre_activation = tf.nn.bias_add(conv, biases)
+    conv2 = tf.nn.relu(pre_activation, name=scope.name)
+
+    conv2 = tf.nn.dropout(conv2 , 0.25)
+    _activation_summary(conv2)
+
+  # pool2
+  pool2 = tf.nn.avg_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME', name='pool1')
+
+  pool2 = tf.nn.dropout(pool2 , 0.25)
+  _activation_summary(pool2)
+
+
+  # conv3
+  with tf.variable_scope('conv3') as scope:
+    kernel = _variable_with_weight_decay('weights',
+                                         shape=[5, 5, 128, 256],
+                                         stddev=5e-2,
+                                         wd=0.0)
+    conv = tf.nn.conv2d(conv2, kernel, [1, 1, 1, 1], padding="SAME")
+    biases = _variable_on_cpu('biases', [256], tf.constant_initializer(0.0))
+    pre_activation = tf.nn.bias_add(conv, biases)
+    conv3 = tf.nn.relu(pre_activation, name=scope.name)
+
+    conv3 = tf.nn.dropout(conv3 , 0.25)
+    _activation_summary(conv3)
+
+  # pool3
+  pool3 = tf.nn.avg_pool(conv3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME', name='pool1')
+
+  pool3 = tf.nn.dropout(pool3 , 0.5)
+  _activation_summary(pool3)
+
+  # local3
+  with tf.variable_scope('local3') as scope:
+    # Move everything into depth so we can perform a single matrix multiply.
+    reshape = tf.reshape(pool3, [FLAGS.batch_size, -1])
+    dim = reshape.get_shape()[1].value
+    weights = _variable_with_weight_decay('weights', shape=[dim, 2048],
+                                          stddev=0.04, wd=0.004)
+    biases = _variable_on_cpu('biases', [2048], tf.constant_initializer(0.1))
+    local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
+    _activation_summary(local3)
+
+    local3 = tf.nn.dropout(local3 , 0.5)
+    _activation_summary(local3)
+
+
+  # local4
+  with tf.variable_scope('local4') as scope:
+    # Move everything into depth so we can perform a single matrix multiply.
+    weights = _variable_with_weight_decay('weights', shape=[2048, 2048],
+                                          stddev=0.04, wd=0.004)
+    biases = _variable_on_cpu('biases', [2048], tf.constant_initializer(0.1))
+    local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name=scope.name)
+    _activation_summary(local4)
+
+    local4 = tf.nn.dropout(local4 , 0.5)
+    _activation_summary(local4)
+
+
+  # local5
+  with tf.variable_scope('local5') as scope:
+    # Move everything into depth so we can perform a single matrix multiply.
+    weights = _variable_with_weight_decay('weights', shape=[2048, 10],
+                                          stddev=0.04, wd=0.004)
+    biases = _variable_on_cpu('biases', [10], tf.constant_initializer(0.1))
+    softmax_linear = tf.nn.relu(tf.matmul(local4, weights) + biases, name=scope.name)
+
+    _activation_summary(softmax_linear)
+
+  return softmax_linear
 
 
 def inference(images):
