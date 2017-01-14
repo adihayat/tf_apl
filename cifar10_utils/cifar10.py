@@ -69,7 +69,7 @@ NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = cifar10_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
 LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-INITIAL_LEARNING_RATE = 0.1       # Initial learning rate.
+INITIAL_LEARNING_RATE = 0.01       # Initial learning rate.
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
@@ -193,7 +193,7 @@ def inference_Srivastevaet(images):
   with tf.variable_scope('conv1') as scope:
     kernel = _variable_with_weight_decay('weights',
                                          shape=[5, 5, 3, 96],
-                                         stddev=5e-2,
+                                         stddev=1e-2,
                                          wd=0.0)
     conv = tf.nn.conv2d(images, kernel, [1, 1, 1, 1], padding="SAME")
     biases = _variable_on_cpu('biases', [96], tf.constant_initializer(0.0))
@@ -215,7 +215,7 @@ def inference_Srivastevaet(images):
   with tf.variable_scope('conv2') as scope:
     kernel = _variable_with_weight_decay('weights',
                                          shape=[5, 5, 96, 128],
-                                         stddev=5e-2,
+                                         stddev=1e-2,
                                          wd=0.0)
     conv = tf.nn.conv2d(conv1, kernel, [1, 1, 1, 1], padding="SAME")
     biases = _variable_on_cpu('biases', [128], tf.constant_initializer(0.0))
@@ -237,7 +237,7 @@ def inference_Srivastevaet(images):
   with tf.variable_scope('conv3') as scope:
     kernel = _variable_with_weight_decay('weights',
                                          shape=[5, 5, 128, 256],
-                                         stddev=5e-2,
+                                         stddev=1e-2,
                                          wd=0.0)
     conv = tf.nn.conv2d(conv2, kernel, [1, 1, 1, 1], padding="SAME")
     biases = _variable_on_cpu('biases', [256], tf.constant_initializer(0.0))
@@ -260,7 +260,7 @@ def inference_Srivastevaet(images):
     reshape = tf.reshape(pool3, [FLAGS.batch_size, -1])
     dim = reshape.get_shape()[1].value
     weights = _variable_with_weight_decay('weights', shape=[dim, 2048],
-                                          stddev=0.04, wd=0.004)
+                                          stddev=0.01, wd=0.004)
     biases = _variable_on_cpu('biases', [2048], tf.constant_initializer(0.1))
     local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases, name=scope.name)
     _activation_summary(local3)
@@ -273,7 +273,7 @@ def inference_Srivastevaet(images):
   with tf.variable_scope('local4') as scope:
     # Move everything into depth so we can perform a single matrix multiply.
     weights = _variable_with_weight_decay('weights', shape=[2048, 2048],
-                                          stddev=0.04, wd=0.004)
+                                          stddev=0.01, wd=0.004)
     biases = _variable_on_cpu('biases', [2048], tf.constant_initializer(0.1))
     local4 = tf.nn.relu(tf.matmul(local3, weights) + biases, name=scope.name)
     _activation_summary(local4)
@@ -286,7 +286,7 @@ def inference_Srivastevaet(images):
   with tf.variable_scope('local5') as scope:
     # Move everything into depth so we can perform a single matrix multiply.
     weights = _variable_with_weight_decay('weights', shape=[2048, 10],
-                                          stddev=0.04, wd=0.004)
+                                          stddev=0.01, wd=0.004)
     biases = _variable_on_cpu('biases', [10], tf.constant_initializer(0.1))
     softmax_linear = tf.nn.relu(tf.matmul(local4, weights) + biases, name=scope.name)
 
